@@ -33,44 +33,44 @@ tr:hover{background:#eef3ff}
 
 <script>
 /* ================= CONFIG ================= */
-const SHEETS={
-  lembar1:{url:"https://docs.google.com/spreadsheets/d/e/2PACX-1vR0oO36v0vrge07HwX1zLsrGfuUxElZ3becef4DFHLNxsz2Lrohya5oThpvmkjzsNBF3_9hSdq0q4Ko/pub?gid=354207978&single=true&output=csv"},
-  lembar2:{url:"https://docs.google.com/spreadsheets/d/e/2PACX-1vR0oO36v0vrge07HwX1zLsrGfuUxElZ3becef4DFHLNxsz2Lrohya5oThpvmkjzsNBF3_9hSdq0q4Ko/pub?gid=311394824&single=true&output=csv"},
-  lembar3:{url:"https://docs.google.com/spreadsheets/d/e/2PACX-1vR0oO36v0vrge07HwX1zLsrGfuUxElZ3becef4DFHLNxsz2Lrohya5oThpvmkjzsNBF3_9hSdq0q4Ko/pub?gid=654408403&single=true&output=csv"}
+const SHEETS = {
+  lembar1: {url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0oO36v0vrge07HwX1zLsrGfuUxElZ3becef4DFHLNxsz2Lrohya5oThpvmkjzsNBF3_9hSdq0q4Ko/pub?gid=354207978&single=true&output=csv"},
+  lembar2: {url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0oO36v0vrge07HwX1zLsrGfuUxElZ3becef4DFHLNxsz2Lrohya5oThpvmkjzsNBF3_9hSdq0q4Ko/pub?gid=311394824&single=true&output=csv"},
+  lembar3: {url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0oO36v0vrge07HwX1zLsrGfuUxElZ3becef4DFHLNxsz2Lrohya5oThpvmkjzsNBF3_9hSdq0q4Ko/pub?gid=654408403&single=true&output=csv"}
 };
 
 /* ================= STATE ================= */
-let allData=[], currentDetail=[], currentTitle="", currentPetugas=null;
-let history=[];
+let allData = [], currentDetail = [], currentTitle = "", currentPetugas = null;
+let history = [];
 
 /* ================= UTIL ================= */
-const isLunas=r=>r.tgl_lunas && r.tgl_lunas.trim()!=="" && r.tgl_lunas!="-";
+const isLunas = r => r.tgl_lunas && r.tgl_lunas.trim() !== "" && r.tgl_lunas !== "-";
 
 /* ================= LOAD ================= */
-function loadSheet(k){
-  history=[];
+function loadSheet(k) {
+  history = [];
   backBtn.classList.add("d-none");
-  document.querySelectorAll(".nav-link").forEach(t=>t.classList.remove("active"));
-  document.getElementById("tab-"+k).classList.add("active");
+  document.querySelectorAll(".nav-link").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + k).classList.add("active");
 
-  fetch(SHEETS[k].url).then(r=>r.text()).then(csv=>{
-    allData=Papa.parse(csv,{header:true,skipEmptyLines:true}).data;
+  fetch(SHEETS[k].url).then(r => r.text()).then(csv => {
+    allData = Papa.parse(csv, {header: true, skipEmptyLines: true}).data;
     renderPetugas();
   });
 }
 
 /* ================= HISTORY ================= */
-function pushView(fn){
+function pushView(fn) {
   history.push(fn);
   backBtn.classList.remove("d-none");
 }
-backBtn.onclick=()=>{
+backBtn.onclick = () => {
   history.pop();
-  history.length ? history.at(-1)() : (backBtn.classList.add("d-none"),renderPetugas());
+  history.length ? history.at(-1)() : (backBtn.classList.add("d-none"), renderPetugas());
 };
 
 /* ================= WA ================= */
-function waMessage(r){
+function waMessage(r) {
   return encodeURIComponent(`
 PT. PLN (PERSERO)
 UID JAWA TENGAH DAN DIY
@@ -90,21 +90,21 @@ PLN ULP TULUNG
 }
 
 /* ================= REKAP PETUGAS ================= */
-function renderPetugas(){
-  history=[];
+function renderPetugas() {
+  history = [];
   backBtn.classList.add("d-none");
 
-  const map={};
-  let totalRp=0;
+  const map = {};
+  let totalRp = 0;
 
-  allData.forEach(r=>{
-    map[r.petugas]=map[r.petugas]||{j:0,rp:0};
+  allData.forEach(r => {
+    map[r.petugas] = map[r.petugas] || {j: 0, rp: 0};
     map[r.petugas].j++;
-    map[r.petugas].rp+=(+r.jumlah||0);
-    totalRp+=(+r.jumlah||0);
+    map[r.petugas].rp += (+r.jumlah || 0);
+    totalRp += (+r.jumlah || 0);
   });
 
-  let h=`<table class="table table-bordered">
+  let h = `<table class="table table-bordered">
   <thead class="table-dark">
   <tr><th>Petugas</th><th>Jumlah</th><th>Total Rp</th></tr>
   </thead><tbody>
@@ -115,168 +115,178 @@ function renderPetugas(){
     <td class="text-end"><b>${totalRp.toLocaleString("id-ID")}</b></td>
   </tr>`;
 
-  Object.keys(map).forEach(p=>{
-    h+=`<tr class="clickable" onclick="openPetugas('${p}')">
+  Object.keys(map).forEach(p => {
+    h += `<tr class="clickable" onclick="openPetugas('${p}')">
       <td>${p}</td>
       <td>${map[p].j}</td>
       <td class="text-end">${map[p].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
 
-  view.innerHTML=h+`</tbody></table>`;
+  view.innerHTML = h + `</tbody></table>`;
 }
 
 /* ================= PETUGAS ================= */
-function openPetugas(p){
+function openPetugas(p) {
   pushView(renderPetugas);
-  currentPetugas=p;
+  currentPetugas = p;
 
-  const data=allData.filter(r=>r.petugas===p);
-  const lunas=data.filter(isLunas);
-  const belum=data.filter(r=>!isLunas(r));
+  const data = allData.filter(r => r.petugas === p);
+  const lunas = data.filter(isLunas);
+  const belum = data.filter(r => !isLunas(r));
 
-  const byDate={};
-  lunas.forEach(r=>{
-    byDate[r.tgl_lunas]=byDate[r.tgl_lunas]||{j:0,rp:0};
+  const byDate = {};
+  lunas.forEach(r => {
+    byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0};
     byDate[r.tgl_lunas].j++;
-    byDate[r.tgl_lunas].rp+=(+r.jumlah||0);
+    byDate[r.tgl_lunas].rp += (+r.jumlah || 0);
   });
 
-  let h=`<h6 class="text-primary">Petugas: ${p}</h6>
+  let h = `<h6 class="text-primary">Petugas: ${p}</h6>
   <h6 class="text-success mt-3">Lunas per Tanggal</h6>
   <table class="table table-sm table-bordered">
   <thead class="table-success">
   <tr><th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr>
   </thead><tbody>`;
 
-  Object.keys(byDate).forEach(t=>{
-    h+=`<tr class="clickable" onclick="detailLunas('${t}')">
+  Object.keys(byDate).forEach(t => {
+    h += `<tr class="clickable" onclick="detailLunas('${t}')">
       <td>${t}</td>
       <td>${byDate[t].j}</td>
       <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
 
-  h+=`</tbody></table>`;
+  h += `</tbody></table>`;
 
-  if(belum.length){
-    h+=`<h6 class="mt-3 clickable" onclick="detailBelum()">Belum Lunas</h6>`;
+  if (belum.length) {
+    h += `<h6 class="mt-3 clickable" onclick="detailBelum()">Belum Lunas</h6>`;
   }
 
-  view.innerHTML=h;
+  view.innerHTML = h;
 }
 
 /* ================= GLOBAL ================= */
-function openGlobal(){
+function openGlobal() {
   pushView(renderPetugas);
 
-  const lunas=allData.filter(isLunas);
-  const byDate={};
+  const lunas = allData.filter(isLunas);
+  const byDate = {};
 
-  lunas.forEach(r=>{
-    byDate[r.tgl_lunas]=byDate[r.tgl_lunas]||{j:0,rp:0};
+  lunas.forEach(r => {
+    byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0};
     byDate[r.tgl_lunas].j++;
-    byDate[r.tgl_lunas].rp+=(+r.jumlah||0);
+    byDate[r.tgl_lunas].rp += (+r.jumlah || 0);
   });
 
-  let h=`<h6 class="text-primary">Semua Petugas</h6>
+  let h = `<h6 class="text-primary">Semua Petugas</h6>
   <h6 class="text-success mt-3">Lunas per Tanggal</h6>
   <table class="table table-sm table-bordered">
   <thead class="table-success">
   <tr><th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr>
   </thead><tbody>`;
 
-  Object.keys(byDate).forEach(t=>{
-    h+=`<tr class="clickable" onclick="detailGlobalLunas('${t}')">
+  Object.keys(byDate).forEach(t => {
+    h += `<tr class="clickable" onclick="detailGlobalLunas('${t}')">
       <td>${t}</td>
       <td>${byDate[t].j}</td>
       <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
 
-  view.innerHTML=h+`</tbody></table>`;
+  view.innerHTML = h + `</tbody></table>`;
 }
 
 /* ================= DETAIL ================= */
-function detailLunas(t){
-  pushView(()=>openPetugas(currentPetugas));
-  currentTitle=`Lunas_${t}`;
-  currentDetail=allData.filter(r=>r.petugas===currentPetugas && isLunas(r) && r.tgl_lunas===t);
+function detailLunas(t) {
+  pushView(() => openPetugas(currentPetugas));
+  currentTitle = `Lunas_${t}`;
+  currentDetail = allData.filter(r => r.petugas === currentPetugas && isLunas(r) && r.tgl_lunas === t);
   renderDetail();
 }
-function detailBelum(){
-  pushView(()=>openPetugas(currentPetugas));
-  currentTitle="Belum_Lunas";
-  currentDetail=allData.filter(r=>r.petugas===currentPetugas && !isLunas(r));
+function detailBelum() {
+  pushView(() => openPetugas(currentPetugas));
+  currentTitle = "Belum_Lunas";
+  currentDetail = allData.filter(r => r.petugas === currentPetugas && !isLunas(r));
   renderDetail();
 }
-function detailGlobalLunas(t){
+function detailGlobalLunas(t) {
   pushView(openGlobal);
-  currentTitle=`Global_Lunas_${t}`;
-  currentDetail=allData.filter(r=>isLunas(r)&&r.tgl_lunas===t);
+  currentTitle = `Global_Lunas_${t}`;
+  currentDetail = allData.filter(r => isLunas(r) && r.tgl_lunas === t);
   renderDetail();
 }
 
 /* ================= DETAIL VIEW ================= */
-function renderDetail(){
-  view.innerHTML=`
+function renderDetail() {
+  view.innerHTML = `
+  <h5 class="text-center">${currentTitle.replace(/_/g, ' ')}</h5>
   <div class="d-flex justify-content-between mb-2">
     <input id="search" class="form-control form-control-sm w-50" placeholder="Search...">
     <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
   </div>
   <div id="table"></div>`;
 
-  document.getElementById("search").oninput=e=>{
-    const t=e.target.value.toLowerCase();
-    drawTable(currentDetail.filter(r=>
-      r.nama.toLowerCase().includes(t)||
-      r.idpel.toLowerCase().includes(t)||
-      r.alamat.toLowerCase().includes(t)
+  document.getElementById("search").oninput = e => {
+    const t = e.target.value.toLowerCase();
+    drawTable(currentDetail.filter(r =>
+      r.nama.toLowerCase().includes(t) ||
+      r.idpel.toLowerCase().includes(t) ||
+      r.alamat.toLowerCase().includes(t) ||
+      r.koded.toLowerCase().includes(t) ||
+      r.tarif.toLowerCase().includes(t) ||
+      r.daya.toLowerCase().includes(t)
     ));
   };
 
   drawTable(currentDetail);
 }
 
-function drawTable(data){
-  let h=`<table class="table table-sm table-bordered">
+function drawTable(data) {
+  let h = `<table class="table table-sm table-bordered">
   <thead class="table-primary">
-  <tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Rp</th></tr>
+  <tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koded</th><th>Tarif / Daya</th><th>Rp</th></tr>
   </thead><tbody>`;
 
-  data.forEach(r=>{
-    h+=`<tr class="clickable" onclick="showCards()">
-      <td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
+  data.forEach(r => {
+    h += `<tr class="clickable" onclick="showCards()">
+      <td>${r.idpel}</td>
+      <td>${r.nama}</td>
+      <td>${r.alamat}</td>
+      <td>${r.koded}</td>
+      <td>${r.tarif} / ${r.daya}</td>
       <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
     </tr>`;
   });
 
-  document.getElementById("table").innerHTML=h+`</tbody></table>`;
+  document.getElementById("table").innerHTML = h + `</tbody></table>`;
 }
 
 /* ================= CARD ================= */
-function showCards(){
+function showCards() {
   pushView(renderDetail);
-  let h=`<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export Excel</button>`;
-  currentDetail.forEach(r=>{
-    h+=`<div class="card mb-2"><div class="card-body p-2">
+  let h = `<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export Excel</button>`;
+  currentDetail.forEach(r => {
+    h += `<div class="card mb-2"><div class="card-body p-2">
       <b>${r.nama}</b><br>
       IDPEL: ${r.idpel}<br>${r.alamat}<br>
+      Koded: ${r.koded}<br>
+      Tarif / Daya: ${r.tarif} / ${r.daya}<br>
       <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b><br>
       <a class="btn btn-success btn-sm mt-2" target="_blank"
       href="https://wa.me/?text=${waMessage(r)}">📤 Kirim WhatsApp</a>
     </div></div>`;
   });
-  view.innerHTML=h;
+  view.innerHTML = h;
 }
 
 /* ================= EXPORT ================= */
-function exportExcel(){
-  let t=`<table><tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Jumlah</th></tr>`;
-  currentDetail.forEach(r=>{
-    t+=`<tr><td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.jumlah}</td></tr>`;
+function exportExcel() {
+  let t = `<table><tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koded</th><th>Tarif / Daya</th><th>Jumlah</th></tr>`;
+  currentDetail.forEach(r => {
+    t += `<tr><td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.koded}</td><td>${r.tarif} / ${r.daya}</td><td>${r.jumlah}</td></tr>`;
   });
-  saveAs(new Blob([t+`</table>`],{type:"application/vnd.ms-excel"}),`${currentTitle}.xls`);
+  saveAs(new Blob([t + `</table>`], {type: "application/vnd.ms-excel"}), `${currentTitle}.xls`);
 }
 
 /* ================= INIT ================= */
@@ -284,14 +294,3 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
