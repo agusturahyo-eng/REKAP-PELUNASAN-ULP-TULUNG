@@ -7,7 +7,7 @@
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
 body{background:#f4f6f9}
@@ -96,7 +96,6 @@ PLN ULP TULUNG
 function renderPetugas() {
   history = [];
   backBtn.classList.add("d-none");
-
   const map = {};
   let totalRp = 0;
 
@@ -111,7 +110,6 @@ function renderPetugas() {
   <thead class="table-dark">
   <tr><th>Petugas</th><th>Jumlah</th><th>Total Rp</th></tr>
   </thead><tbody>
-
   <tr class="table-primary clickable" onclick="openGlobal()">
     <td><b>SEMUA PETUGAS</b></td>
     <td><b>${allData.length}</b></td>
@@ -125,7 +123,6 @@ function renderPetugas() {
       <td class="text-end">${map[p].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
-
   view.innerHTML = h + `</tbody></table>`;
 }
 
@@ -133,12 +130,11 @@ function renderPetugas() {
 function openPetugas(p) {
   pushView(renderPetugas);
   currentPetugas = p;
-
   const data = allData.filter(r => r.petugas === p);
   const lunas = data.filter(isLunas);
   const belum = data.filter(r => !isLunas(r));
-
   const byDate = {};
+
   lunas.forEach(r => {
     byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0};
     byDate[r.tgl_lunas].j++;
@@ -159,23 +155,19 @@ function openPetugas(p) {
       <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
-
   h += `</tbody></table>`;
 
   if (belum.length) {
     h += `<h6 class="mt-3 clickable text-danger" onclick="detailBelum()"><b>> Belum Lunas (${belum.length} Pelanggan)</b></h6>`;
   }
-
   view.innerHTML = h;
 }
 
 /* ================= GLOBAL ================= */
 function openGlobal() {
   pushView(renderPetugas);
-
   const lunas = allData.filter(isLunas);
   const byDate = {};
-
   lunas.forEach(r => {
     byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0};
     byDate[r.tgl_lunas].j++;
@@ -196,7 +188,6 @@ function openGlobal() {
       <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
-
   view.innerHTML = h + `</tbody></table>`;
 }
 
@@ -222,41 +213,29 @@ function detailGlobalLunas(t) {
 
 /* ================= DETAIL VIEW ================= */
 function renderDetail() {
-  sortState = { key: null, asc: true }; // Reset sort
+  sortState = { key: null, asc: true };
   view.innerHTML = `
   <h5 class="text-center">${currentTitle.replace(/_/g, ' ')}</h5>
   <div class="d-flex justify-content-between mb-2">
     <input id="search" class="form-control form-control-sm w-50" placeholder="Search...">
-    <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
+    <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export XLSX</button>
   </div>
   <div id="table"></div>`;
 
-  const searchInput = document.getElementById("search");
-  searchInput.oninput = e => {
+  document.getElementById("search").oninput = e => {
     const t = e.target.value.toLowerCase();
     const filtered = currentDetail.filter(r =>
-      r.nama.toLowerCase().includes(t) ||
-      r.idpel.toLowerCase().includes(t) ||
-      r.alamat.toLowerCase().includes(t) ||
-      r.koked.toLowerCase().includes(t) ||
-      r.tarif.toLowerCase().includes(t) ||
-      r.daya.toLowerCase().includes(t)
+      Object.values(r).some(v => String(v).toLowerCase().includes(t))
     );
     drawTable(filtered);
   };
-
   drawTable(currentDetail);
 }
 
 function drawTable(data) {
-  // Fungsi Sort Lokal
   window.triggerSort = (key) => {
-    if (sortState.key === key) {
-      sortState.asc = !sortState.asc;
-    } else {
-      sortState.key = key;
-      sortState.asc = true;
-    }
+    if (sortState.key === key) { sortState.asc = !sortState.asc; } 
+    else { sortState.key = key; sortState.asc = true; }
 
     const sortedData = [...data].sort((a, b) => {
       let v1 = a[key], v2 = b[key];
@@ -292,44 +271,41 @@ function drawTable(data) {
       <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
     </tr>`;
   });
-
   document.getElementById("table").innerHTML = h + `</tbody></table>`;
 }
 
 /* ================= CARD ================= */
-// Fungsi baru agar saat klik baris tabel, dia fokus ke kartu pelanggan tersebut
 function showCardsByData(selectedIdpel) {
   pushView(renderDetail);
-  let h = `<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export Excel</button>`;
-  
+  let h = `<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export XLSX</button>`;
   currentDetail.forEach(r => {
-    const isTarget = r.idpel === selectedIdpel ? 'border-primary border-2' : '';
+    const isTarget = r.idpel === selectedIdpel ? 'border-primary border-3 shadow' : '';
     h += `<div class="card mb-2 ${isTarget}"><div class="card-body p-2">
-      <b>${r.nama}</b><br>
-      IDPEL: ${r.idpel}<br>${r.alamat}<br>
-      Koded: ${r.koked}<br>
-      Tarif / Daya: ${r.tarif} / ${r.daya}<br>
+      <b>${r.nama}</b><br>IDPEL: ${r.idpel}<br>${r.alamat}<br>
+      Koked: ${r.koked} | Tarif: ${r.tarif}/${r.daya}<br>
       <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b><br>
-      <a class="btn btn-success btn-sm mt-2" target="_blank"
-      href="https://wa.me/?text=${waMessage(r)}">📤 Kirim WhatsApp</a>
+      <a class="btn btn-success btn-sm mt-2" target="_blank" href="https://wa.me/?text=${waMessage(r)}">📤 WhatsApp</a>
     </div></div>`;
   });
   view.innerHTML = h;
-  if(selectedIdpel) {
-      window.scrollTo(0,0);
-  }
+  window.scrollTo(0,0);
 }
 
-// Tetapkan fungsi lama untuk kompatibilitas
-function showCards() { showCardsByData(null); }
-
-/* ================= EXPORT ================= */
+/* ================= EXPORT XLSX ================= */
 function exportExcel() {
-  let t = `<table><tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koked</th><th>Tarif / Daya</th><th>Jumlah</th></tr>`;
-  currentDetail.forEach(r => {
-    t += `<tr><td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.koked}</td><td>${r.tarif} / ${r.daya}</td><td>${r.jumlah}</td></tr>`;
-  });
-  saveAs(new Blob([t + `</table>`], {type: "application/vnd.ms-excel"}), `${currentTitle}.xls`);
+  // Menyiapkan data untuk XLSX (array of arrays)
+  const header = ["IDPEL", "Nama", "Alamat", "Koked", "Tarif", "Daya", "Jumlah"];
+  const rows = currentDetail.map(r => [
+    r.idpel, r.nama, r.alamat, r.koked, r.tarif, r.daya, parseFloat(r.jumlah) || 0
+  ]);
+  
+  // Membuat worksheet
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data");
+
+  // Simpan file
+  XLSX.writeFile(wb, `${currentTitle}.xlsx`);
 }
 
 /* ================= INIT ================= */
