@@ -15,6 +15,7 @@ body{background:#f4f6f9}
 tr:hover{background:#eef3ff}
 .table-primary th:hover { background-color: #0d6efd !important; color: white; }
 .table-responsive { overflow-x: auto; }
+.card.highlight { border: 2px solid #0d6efd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 </style>
 </head>
 
@@ -43,16 +44,36 @@ const SHEETS = {
 
 /* ================= STATE ================= */
 let allData = [], currentDetail = [], currentTitle = "", currentPetugas = "Semua";
-let history = [];
+let historyStack = [];
 let sortState = { key: null, asc: true };
 
 /* ================= UTIL ================= */
 const isLunas = r => r.tgl_lunas && r.tgl_lunas.trim() !== "" && r.tgl_lunas !== "-";
 
+/* ================= NAVIGATION ================= */
+function pushView(fn) {
+  // Hanya push jika fungsi berbeda dengan yang terakhir (mencegah loop)
+  if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== fn) {
+    historyStack.push(fn);
+  }
+  backBtn.classList.remove("d-none");
+}
+
+backBtn.onclick = () => {
+  if (historyStack.length > 0) {
+    const previousView = historyStack.pop();
+    previousView();
+  }
+  
+  if (historyStack.length === 0) {
+    backBtn.classList.add("d-none");
+  }
+};
+
 /* ================= LOAD ================= */
 function loadSheet(k) {
-  history = [];
-  currentPetugas = "Semua"; // Reset nama petugas saat ganti lembar
+  historyStack = [];
+  currentPetugas = "Semua";
   backBtn.classList.add("d-none");
   document.querySelectorAll(".nav-link").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + k).classList.add("active");
@@ -63,30 +84,14 @@ function loadSheet(k) {
   });
 }
 
-/* ================= HISTORY ================= */
-function pushView(fn) {
-  history.push(fn);
-  backBtn.classList.remove("d-none");
-}
-backBtn.onclick = () => {
-  history.pop();
-  if (history.length) {
-    history.at(-1)();
-  } else {
-    backBtn.classList.add("d-none");
-    currentPetugas = "Semua"; 
-    renderPetugas();
-  }
-};
-
 /* ================= WA ================= */
 function waMessage(r) {
   return encodeURIComponent(`PT. PLN (PERSERO)\nUID JAWA TENGAH DAN DIY\nUP3 KLATEN\nULP TULUNG\n\nNama : ${r.nama}\nID Pelanggan : ${r.idpel}\nKoked : ${r.koked}\nAlamat : ${r.alamat}\nTarif / Daya : ${r.tarif} / ${r.daya}\n\nJumlah Tunggakan:\nRp ${(+r.jumlah).toLocaleString("id-ID")}\n\nPLN ULP TULUNG`);
 }
 
-/* ================= REKAP UTAMA ================= */
+/* ================= VIEWS ================= */
 function renderPetugas() {
-  history = [];
+  historyStack = []; // Root view
   backBtn.classList.add("d-none");
   const map = {};
   let totalRp = 0;
@@ -109,19 +114,18 @@ function renderPetugas() {
     <td class="text-end"><b>${totalRp.toLocaleString("id-ID")}</b></td>
   </tr>`;
 
-  Object.keys(map).forEach(p => {
+  Object.keys(map).sort().forEach(p => {
     h += `<tr class="clickable" onclick="openPetugas('${p}')">
-      <td>${p}</td>
-      <td>${map[p].j}</td>
-      <td class="text-end">${map[p].rp.toLocaleString("id-ID")}</td>
+      <td>${p}</td><td>${map[p].j}</td><td class="text-end">${map[p].rp.toLocaleString("id-ID")}</td>
     </tr>`;
   });
   view.innerHTML = h + `</tbody></table></div>`;
 }
 
 function openPetugas(p) {
-  currentPetugas = p; // Mengunci nama petugas
+  currentPetugas = p;
   pushView(renderPetugas);
+  
   const data = allData.filter(r => r.petugas === p);
   const lunas = data.filter(isLunas);
   const belum = data.filter(r => !isLunas(r));
@@ -133,18 +137,18 @@ function openPetugas(p) {
     byDate[r.tgl_lunas].rp += (+r.jumlah || 0);
   });
 
-  let h = `<h6 class="text-primary">Petugas: ${p}</h6>
+  let h = `<h6 class="text-primary fw-bold">Petugas: ${p}</h6>
   <h6 class="text-success mt-3">Lunas per Tanggal</h6>
   <div class="table-responsive"><table class="table table-sm table-bordered">
-  <thead class="table-success"><tr><th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr></thead><tbody>`;
+  <thead class="table-success"><tr><th>Tanggal</th><th>Plg</th><th>Total Rp</th></tr></thead><tbody>`;
 
-  Object.keys(byDate).forEach(t => {
+  Object.keys(byDate).sort().reverse().forEach(t => {
     h += `<tr class="clickable" onclick="detailLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td><td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`;
   });
+  
   h += `</tbody></table></div>`;
-
   if (belum.length) {
-    h += `<h6 class="mt-3 clickable text-danger" onclick="detailBelum()"><b>> Belum Lunas (${belum.length} Pelanggan)</b></h6>`;
+    h += `<div class="d-grid mt-3"><button class="btn btn-outline-danger btn-sm fw-bold" onclick="detailBelum()">Lihat Belum Lunas (${belum.length})</button></div>`;
   }
   view.innerHTML = h;
 }
@@ -160,18 +164,18 @@ function openGlobal() {
     byDate[r.tgl_lunas].rp += (+r.jumlah || 0);
   });
 
-  let h = `<h6 class="text-primary">Semua Petugas</h6>
-  <h6 class="text-success mt-3">Lunas per Tanggal</h6>
+  let h = `<h6 class="text-primary fw-bold">Semua Petugas</h6>
+  <h6 class="text-success mt-3">Lunas per Tanggal (Global)</h6>
   <div class="table-responsive"><table class="table table-sm table-bordered">
-  <thead class="table-success"><tr><th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr></thead><tbody>`;
+  <thead class="table-success"><tr><th>Tanggal</th><th>Plg</th><th>Total Rp</th></tr></thead><tbody>`;
 
-  Object.keys(byDate).forEach(t => {
+  Object.keys(byDate).sort().reverse().forEach(t => {
     h += `<tr class="clickable" onclick="detailGlobalLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td><td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`;
   });
   view.innerHTML = h + `</tbody></table></div>`;
 }
 
-/* ================= DETAIL LOGIC ================= */
+/* ================= DETAIL & CARDS ================= */
 function detailLunas(t) {
   const p = currentPetugas;
   pushView(() => openPetugas(p));
@@ -196,14 +200,15 @@ function detailGlobalLunas(t) {
 function renderDetail() {
   sortState = { key: null, asc: true };
   view.innerHTML = `
-  <h5 class="text-center">${currentTitle.replace(/_/g, ' ')}</h5>
-  <div class="d-flex justify-content-between mb-2 gap-1">
-    <input id="search" class="form-control form-control-sm w-50" placeholder="Cari...">
-    <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ XLSX</button>
+  <h5 class="text-center fw-bold text-uppercase" style="font-size:0.9rem">${currentTitle.replace(/_/g, ' ')}</h5>
+  <div class="d-flex justify-content-between mb-2 gap-2">
+    <input id="search" class="form-control form-control-sm" placeholder="Cari data...">
+    <button class="btn btn-success btn-sm text-nowrap" onclick="exportExcel()">⬇ XLSX</button>
   </div>
-  <div id="table"></div>`;
+  <div id="tableArea"></div>`;
 
-  document.getElementById("search").oninput = e => {
+  const searchInput = document.getElementById("search");
+  searchInput.oninput = e => {
     const t = e.target.value.toLowerCase();
     const filtered = currentDetail.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(t)));
     drawTable(filtered);
@@ -224,38 +229,51 @@ function drawTable(data) {
   };
 
   const icon = (k) => sortState.key === k ? (sortState.asc ? ' ▲' : ' ▼') : '';
-  let h = `<div class="table-responsive"><table class="table table-sm table-bordered">
+  let h = `<div class="table-responsive"><table class="table table-sm table-bordered" style="font-size:0.85rem">
   <thead class="table-primary text-nowrap">
   <tr>
     <th class="clickable" onclick="triggerSort('idpel')">IDPEL${icon('idpel')}</th>
     <th class="clickable" onclick="triggerSort('nama')">Nama${icon('nama')}</th>
-    <th class="clickable" onclick="triggerSort('alamat')">Alamat${icon('alamat')}</th>
     <th class="clickable" onclick="triggerSort('koked')">Koked${icon('koked')}</th>
-    <th class="clickable" onclick="triggerSort('tarif')">Tarif/Daya${icon('tarif')}</th>
     <th class="clickable" onclick="triggerSort('jumlah')">Rp${icon('jumlah')}</th>
   </tr></thead><tbody>`;
 
   data.forEach(r => {
     h += `<tr class="clickable" onclick="showCardsByData('${r.idpel}')">
-      <td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.koked}</td><td>${r.tarif}/${r.daya}</td><td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
+      <td>${r.idpel}</td><td>${r.nama}</td><td>${r.koked}</td><td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
     </tr>`;
   });
-  document.getElementById("table").innerHTML = h + `</tbody></table></div>`;
+  document.getElementById("tableArea").innerHTML = h + `</tbody></table></div>`;
 }
 
 function showCardsByData(id) {
   pushView(renderDetail);
-  let h = `<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export XLSX</button>`;
+  let h = `<div class="mb-2 d-flex justify-content-between">
+    <span class="badge bg-primary">Detail Pelanggan</span>
+    <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export XLSX</button>
+  </div>`;
+  
   currentDetail.forEach(r => {
-    const cls = r.idpel === id ? 'border-primary border-3 shadow' : '';
-    h += `<div class="card mb-2 ${cls}"><div class="card-body p-2">
-      <b>${r.nama}</b><br>IDPEL: ${r.idpel}<br>${r.alamat}<br>
-      Koked: ${r.koked} | Rp ${(+r.jumlah).toLocaleString("id-ID")}<br>
-      <a class="btn btn-success btn-sm mt-2" target="_blank" href="https://wa.me/?text=${waMessage(r)}">📤 WhatsApp</a>
+    const isTarget = r.idpel === id;
+    h += `<div class="card mb-2 ${isTarget ? 'highlight' : ''}" id="card-${r.idpel}">
+      <div class="card-body p-2">
+      <div class="d-flex justify-content-between"><b>${r.nama}</b> <span class="badge bg-light text-dark">${r.koked}</span></div>
+      <small class="text-muted">${r.idpel} | ${r.tarif}/${r.daya}</small><br>
+      <small>${r.alamat}</small><br>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <b class="text-danger">Rp ${(+r.jumlah).toLocaleString("id-ID")}</b>
+        <a class="btn btn-success btn-sm" target="_blank" href="https://wa.me/?text=${waMessage(r)}">📤 WA</a>
+      </div>
     </div></div>`;
   });
   view.innerHTML = h;
-  window.scrollTo(0,0);
+  
+  if(id) {
+    setTimeout(() => {
+        const el = document.getElementById(`card-${id}`);
+        if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }
 }
 
 /* ================= EXPORT XLSX ================= */
@@ -269,7 +287,6 @@ function exportExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Data");
 
-  // Nama file akan menyertakan nama petugas yang tersimpan di state
   const cleanName = currentPetugas.replace(/\s+/g, '_');
   XLSX.writeFile(wb, `${cleanName}_${currentTitle}.xlsx`);
 }
@@ -279,3 +296,4 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
+
