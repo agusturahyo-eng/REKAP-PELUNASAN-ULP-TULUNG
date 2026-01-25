@@ -13,6 +13,7 @@
 body{background:#f4f6f9}
 .clickable{cursor:pointer}
 tr:hover{background:#eef3ff}
+th{cursor:pointer}
 </style>
 </head>
 
@@ -26,8 +27,12 @@ tr:hover{background:#eef3ff}
 </ul>
 
 <h4 class="text-center text-primary mb-3">⚡ Rekap Tunggakan ULP Tulung</h4>
+
 <button id="backBtn" class="btn btn-secondary btn-sm mb-2 d-none">⬅ Kembali</button>
+
 <div id="view"></div>
+
+</div>
 
 <script>
 /* ================= CONFIG ================= */
@@ -40,6 +45,8 @@ const SHEETS = {
 /* ================= STATE ================= */
 let allData=[], currentPetugas=null, currentDetail=[], currentTitle="";
 let history=[], currentSheet="lembar1";
+let sortKey="", sortAsc=true;
+let filteredDetail=[];
 
 /* ================= UTIL ================= */
 const isLunas = r => r.tgl_lunas && r.tgl_lunas.trim()!=="" && r.tgl_lunas!="-";
@@ -95,6 +102,7 @@ Tarif / Daya    : ${r.tarif} / ${r.daya}
 
 Jumlah Tunggakan:
 Rp ${(+r.jumlah).toLocaleString("id-ID")}
+(Belum termasuk biaya administrasi)
 
 Tulung, ${new Date().toLocaleDateString("id-ID")}
 PLN ULP TULUNG
@@ -137,63 +145,51 @@ function renderPetugas(){
 function openGlobal(){
   pushView(renderPetugas);
   currentPetugas="SEMUA";
-
   const lunas=allData.filter(isLunas);
-  const belum=allData.filter(r=>!isLunas(r));
-
   const byDate={};
-  lunas.forEach(r=>byDate[r.tgl_lunas]=(byDate[r.tgl_lunas]||0)+1);
-
-  let h=`<h6 class="text-primary">Rekap Semua Petugas</h6>
-  <h6 class="text-success mt-3">Lunas per Tanggal</h6>
-  <table class="table table-sm table-bordered">
-  <thead class="table-success">
-  <tr><th>Tanggal</th><th>Jumlah</th></tr>
-  </thead><tbody>`;
-
-  Object.keys(byDate).forEach(t=>{
-    h+=`<tr class="clickable" onclick="detailGlobalLunas('${t}')">
-    <td>${t}</td><td>${byDate[t]}</td></tr>`;
+  lunas.forEach(r=>{
+    byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {jml:0, rp:0};
+    byDate[r.tgl_lunas].jml++;
+    byDate[r.tgl_lunas].rp += +r.jumlah || 0;
   });
-  h+=`</tbody></table>`;
-
-  if(belum.length>0){
-    h+=`<h6 class="mt-3 clickable" onclick="detailGlobalBelum()">Belum Lunas</h6>`;
-  }
-
-  view.innerHTML=h;
+  let h=`<h6 class="text-primary">Rekap Semua Petugas</h6>
+  <table class="table table-sm table-bordered mt-2">
+  <thead class="table-success"><tr>
+  <th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr></thead><tbody>`;
+  Object.keys(byDate).forEach(t=>{
+    h += `<tr class="clickable" onclick="detailGlobalLunas('${t}')">
+    <td>${t}</td>
+    <td>${byDate[t].jml}</td>
+    <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`;
+  });
+  h += `</tbody></table>`;
+  view.innerHTML = h;
 }
 
 /* ================= PETUGAS ================= */
 function openPetugas(p){
   pushView(renderPetugas);
   currentPetugas=p;
-
-  const data=allData.filter(r=>r.petugas===p);
-  const lunas=data.filter(isLunas);
-  const belum=data.filter(r=>!isLunas(r));
-
+  const data = allData.filter(r=>r.petugas===p);
+  const lunas = data.filter(isLunas);
   const byDate={};
-  lunas.forEach(r=>byDate[r.tgl_lunas]=(byDate[r.tgl_lunas]||0)+1);
-
-  let h=`<h6 class="text-primary">Petugas: ${p}</h6>
-  <h6 class="text-success mt-3">Lunas per Tanggal</h6>
-  <table class="table table-sm table-bordered">
-  <thead class="table-success">
-  <tr><th>Tanggal</th><th>Jumlah</th></tr>
-  </thead><tbody>`;
-
-  Object.keys(byDate).forEach(t=>{
-    h+=`<tr class="clickable" onclick="detailLunas('${t}')">
-    <td>${t}</td><td>${byDate[t]}</td></tr>`;
+  lunas.forEach(r=>{
+    byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {jml:0, rp:0};
+    byDate[r.tgl_lunas].jml++;
+    byDate[r.tgl_lunas].rp += +r.jumlah || 0;
   });
-  h+=`</tbody></table>`;
-
-  if(belum.length>0){
-    h+=`<h6 class="mt-3 clickable" onclick="detailBelum()">Belum Lunas</h6>`;
-  }
-
-  view.innerHTML=h;
+  let h=`<h6 class="text-primary">Petugas: ${p}</h6>
+  <table class="table table-sm table-bordered mt-2">
+  <thead class="table-success"><tr>
+  <th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr></thead><tbody>`;
+  Object.keys(byDate).forEach(t=>{
+    h += `<tr class="clickable" onclick="detailLunas('${t}')">
+    <td>${t}</td>
+    <td>${byDate[t].jml}</td>
+    <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`;
+  });
+  h += `</tbody></table>`;
+  view.innerHTML = h;
 }
 
 /* ================= DETAIL ================= */
@@ -201,75 +197,91 @@ function detailLunas(t){
   pushView(()=>openPetugas(currentPetugas));
   currentTitle=`Lunas_${t}`;
   currentDetail=allData.filter(r=>r.petugas===currentPetugas && isLunas(r) && r.tgl_lunas===t);
+  filteredDetail=[...currentDetail];
   renderDetailTable(`Detail Lunas ${t}`,"success");
 }
-function detailBelum(){
-  pushView(()=>openPetugas(currentPetugas));
-  currentTitle="Belum_Lunas";
-  currentDetail=allData.filter(r=>r.petugas===currentPetugas && !isLunas(r));
-  renderDetailTable("Detail Belum Lunas","secondary");
-}
+
 function detailGlobalLunas(t){
   pushView(openGlobal);
   currentTitle=`Global_Lunas_${t}`;
-  currentDetail=allData.filter(r=>isLunas(r)&&r.tgl_lunas===t);
+  currentDetail=allData.filter(r=>isLunas(r) && r.tgl_lunas===t);
+  filteredDetail=[...currentDetail];
   renderDetailTable(`Detail Lunas ${t}`,"success");
-}
-function detailGlobalBelum(){
-  pushView(openGlobal);
-  currentTitle="Global_Belum_Lunas";
-  currentDetail=allData.filter(r=>!isLunas(r));
-  renderDetailTable("Detail Belum Lunas","secondary");
 }
 
 /* ================= TABLE + CARD ================= */
 function renderDetailTable(title,color){
-  let h=`<div class="d-flex justify-content-between">
+  let h=`<div class="mb-2">
   <h6 class="text-${color}">${title}</h6>
-  <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
+  <input id="searchInput" class="form-control form-control-sm w-50" placeholder="Cari..." oninput="searchDetail()">
   </div>
-
-  <div class="table-responsive mt-2">
-  <table class="table table-sm table-bordered">
+  <div class="table-responsive">
+  <table class="table table-sm table-bordered" id="dt">
   <thead class="table-${color}">
   <tr>
-  <th>IDPEL</th><th>Nama</th><th>Alamat</th>
-  <th>Koded</th><th>Tarif</th><th>Daya</th><th>Rp</th>
-  </tr></thead><tbody>`;
+  <th onclick="sortDetail('idpel')">IDPEL</th>
+  <th onclick="sortDetail('nama')">Nama</th>
+  <th onclick="sortDetail('alamat')">Alamat</th>
+  <th onclick="sortDetail('koked')">Koded</th>
+  <th onclick="sortDetail('tarif')">Tarif</th>
+  <th onclick="sortDetail('daya')">Daya</th>
+  <th onclick="sortDetail('jumlah')">Rp</th>
+  </tr></thead><tbody id="tbodyDetail"></tbody></table></div>`;
 
-  currentDetail.forEach(r=>{
-    h+=`<tr class="clickable" onclick="showCards()">
-    <td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
-    <td>${r.koked}</td><td>${r.tarif}</td><td>${r.daya}</td>
-    <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
-    </tr>`;
-  });
-
-  h+=`</tbody></table></div>`;
-  view.innerHTML=h;
+  view.innerHTML = h;
+  renderTbody(filteredDetail);
 }
 
+function renderTbody(data){
+  const tbody = document.getElementById("tbodyDetail");
+  tbody.innerHTML = "";
+  data.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.className="clickable";
+    tr.innerHTML=`<td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
+      <td>${r.koked}</td><td>${r.tarif}</td><td>${r.daya}</td>
+      <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>`;
+    tr.onclick = ()=>showCards();
+    tbody.appendChild(tr);
+  });
+}
+
+function sortDetail(key){
+  sortAsc=(sortKey===key)?!sortAsc:true;
+  sortKey=key;
+  currentDetail.sort((a,b)=>{
+    let x=a[key]||"", y=b[key]||"";
+    if(!isNaN(x) && !isNaN(y)) return sortAsc?x-y:y-x;
+    return sortAsc?x.localeCompare(y):y.localeCompare(x);
+  });
+  filteredDetail=[...currentDetail];
+  renderTbody(filteredDetail);
+}
+
+function searchDetail(){
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  filteredDetail = currentDetail.filter(r=>
+    (r.nama||"").toLowerCase().includes(q)||
+    (r.idpel||"").toLowerCase().includes(q)||
+    (r.alamat||"").toLowerCase().includes(q)
+  );
+  renderTbody(filteredDetail);
+}
+
+/* ================= CARD VIEW ================= */
 function showCards(){
-  pushView(()=>renderDetailTable(currentTitle,"secondary"));
-
-  let h=`<div class="d-flex justify-content-between mb-2">
-  <h6 class="text-primary">Detail Pelanggan</h6>
-  <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
-  </div>`;
-
-  currentDetail.forEach(r=>{
+  pushView(()=>renderDetailTable(currentTitle));
+  let h=`<h6 class="text-primary">Detail Pelanggan</h6>`;
+  filteredDetail.forEach((r,i)=>{
     h+=`<div class="card mb-2">
       <div class="card-body p-2">
-        <b>${r.nama}</b><br>
-        IDPEL: ${r.idpel}<br>
-        ${r.alamat}<br>
-        Koded: ${r.koked}<br>
-        Tarif/Daya: ${r.tarif}/${r.daya}<br>
+        <b>${r.nama}</b><br>IDPEL: ${r.idpel}<br>${r.alamat}<br>
+        Koded: ${r.koked}<br>Tarif/Daya: ${r.tarif}/${r.daya}<br>
         <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b>
         <div class="mt-2">
           <a class="btn btn-success btn-sm"
              target="_blank"
-             href="https://wa.me/${r.no_hp || ""}?text=${waMessage(r)}">
+             href="https://wa.me/?text=${waMessage(r)}">
              📤 Kirim via WhatsApp
           </a>
         </div>
@@ -298,7 +310,6 @@ function exportExcel(){
 /* LOAD AWAL */
 loadSheet("lembar1");
 </script>
-</div>
 </body>
 </html>
 
