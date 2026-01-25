@@ -29,6 +29,7 @@ th{cursor:pointer}
 <h4 class="text-center text-primary mb-3">⚡ Rekap Tunggakan ULP Tulung</h4>
 
 <button id="backBtn" class="btn btn-secondary btn-sm mb-2 d-none">⬅ Kembali</button>
+
 <div id="view"></div>
 
 </div>
@@ -110,10 +111,9 @@ PLN ULP TULUNG
 
 /* ================= KIRIM WA ================= */
 function kirimWA(r){
-  let no = prompt("Masukkan nomor WA (misal 62812xxxxxx):");
-  if(!no) return;
-  let url = "https://wa.me/" + no + "?text=" + waMessage(r);
-  window.open(url, "_blank");
+  // langsung buka WA, user pilih kontak sendiri
+  const url = "https://web.whatsapp.com/send?text=" + waMessage(r);
+  window.open(url,"_blank");
 }
 
 /* ================= REKAP PETUGAS ================= */
@@ -205,7 +205,7 @@ function detailLunas(t){
   currentTitle=`Lunas_${t}`;
   currentDetail=allData.filter(r=>r.petugas===currentPetugas && isLunas(r) && r.tgl_lunas===t);
   filteredDetail=[...currentDetail];
-  renderDetailTable(`Detail Lunas ${t}`,"success", filteredDetail);
+  renderDetailTable(`Detail Lunas ${t}`,"success");
 }
 
 function detailGlobalLunas(t){
@@ -213,14 +213,14 @@ function detailGlobalLunas(t){
   currentTitle=`Global_Lunas_${t}`;
   currentDetail=allData.filter(r=>isLunas(r) && r.tgl_lunas===t);
   filteredDetail=[...currentDetail];
-  renderDetailTable(`Detail Lunas ${t}`,"success", filteredDetail);
+  renderDetailTable(`Detail Lunas ${t}`,"success");
 }
 
 /* ================= TABLE + CARD ================= */
-function renderDetailTable(title,color,data=currentDetail){
-  let h=`<div class="d-flex justify-content-between mb-2">
+function renderDetailTable(title,color){
+  let h=`<div class="mb-2">
   <h6 class="text-${color}">${title}</h6>
-  <input class="form-control form-control-sm w-50" placeholder="Cari..." oninput="searchDetail(this.value)">
+  <input id="searchInput" class="form-control form-control-sm w-50" placeholder="Cari..." oninput="searchDetail()">
   </div>
   <div class="table-responsive">
   <table class="table table-sm table-bordered" id="dt">
@@ -233,16 +233,24 @@ function renderDetailTable(title,color,data=currentDetail){
   <th onclick="sortDetail('tarif')">Tarif</th>
   <th onclick="sortDetail('daya')">Daya</th>
   <th onclick="sortDetail('jumlah')">Rp</th>
-  </tr></thead><tbody>`;
-  data.forEach(r=>{
-    h += `<tr class="clickable" onclick="showCards()">
-      <td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
-      <td>${r.koked}</td><td>${r.tarif}</td><td>${r.daya}</td>
-      <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
-    </tr>`;
-  });
-  h += `</tbody></table></div>`;
+  </tr></thead><tbody id="tbodyDetail"></tbody></table></div>`;
+
   view.innerHTML = h;
+  renderTbody(filteredDetail);
+}
+
+function renderTbody(data){
+  const tbody = document.getElementById("tbodyDetail");
+  tbody.innerHTML = "";
+  data.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.className="clickable";
+    tr.innerHTML=`<td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
+      <td>${r.koked}</td><td>${r.tarif}</td><td>${r.daya}</td>
+      <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>`;
+    tr.onclick = ()=>showCards();
+    tbody.appendChild(tr);
+  });
 }
 
 function sortDetail(key){
@@ -254,25 +262,25 @@ function sortDetail(key){
     return sortAsc?x.localeCompare(y):y.localeCompare(x);
   });
   filteredDetail=[...currentDetail];
-  renderDetailTable(currentTitle,"secondary", filteredDetail);
+  renderTbody(filteredDetail);
 }
 
-function searchDetail(q){
-  q=q.toLowerCase();
+function searchDetail(){
+  const q = document.getElementById("searchInput").value.toLowerCase();
   filteredDetail = currentDetail.filter(r=>
     (r.nama||"").toLowerCase().includes(q)||
     (r.idpel||"").toLowerCase().includes(q)||
     (r.alamat||"").toLowerCase().includes(q)
   );
-  renderDetailTable(currentTitle,"secondary", filteredDetail);
+  renderTbody(filteredDetail);
 }
 
 /* ================= CARD VIEW ================= */
 function showCards(){
-  pushView(()=>renderDetailTable(currentTitle,"secondary", filteredDetail));
+  pushView(()=>renderDetailTable(currentTitle));
   let h=`<h6 class="text-primary">Detail Pelanggan</h6>`;
   filteredDetail.forEach((r,i)=>{
-    h+=`<div class="card mb-2" id="card-${i}">
+    h+=`<div class="card mb-2">
       <div class="card-body p-2">
         <b>${r.nama}</b><br>IDPEL: ${r.idpel}<br>${r.alamat}<br>
         Koded: ${r.koked}<br>Tarif/Daya: ${r.tarif}/${r.daya}<br>
@@ -282,7 +290,6 @@ function showCards(){
     </div>`;
   });
   view.innerHTML=h;
-  // pasang tombol WA via JS
   filteredDetail.forEach((r,i)=>{
     const btn = document.createElement("button");
     btn.className="btn btn-success btn-sm";
