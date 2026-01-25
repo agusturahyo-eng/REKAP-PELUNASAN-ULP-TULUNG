@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Rekap Tunggakan ULP Tulung</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
 <style>
-body { background:#f4f6f9 }
-.clickable { cursor:pointer }
-tr:hover { background:#eef3ff }
+body{background:#f4f6f9}
+.clickable{cursor:pointer; user-select: none;}
+tr:hover{background:#eef3ff}
+.table-primary th:hover { background-color: #0d6efd !important; color: white; }
 </style>
 </head>
 
@@ -42,9 +43,10 @@ const SHEETS = {
 /* ================= STATE ================= */
 let allData = [], currentDetail = [], currentTitle = "", currentPetugas = null;
 let history = [];
+let sortState = { key: null, asc: true };
 
 /* ================= UTIL ================= */
-const isLunas = r => r.tgl_lunas && r.tgl_lunas.trim() !== "" && r.tgl_lunas !== "";
+const isLunas = r => r.tgl_lunas && r.tgl_lunas.trim() !== "" && r.tgl_lunas !== "-";
 
 /* ================= LOAD ================= */
 function loadSheet(k) {
@@ -66,12 +68,7 @@ function pushView(fn) {
 }
 backBtn.onclick = () => {
   history.pop();
-  if (history.length) {
-    history.at(-1)();
-  } else {
-    backBtn.classList.add("d-none");
-    renderPetugas();
-  }
+  history.length ? history.at(-1)() : (backBtn.classList.add("d-none"), renderPetugas());
 };
 
 /* ================= WA ================= */
@@ -166,7 +163,7 @@ function openPetugas(p) {
   h += `</tbody></table>`;
 
   if (belum.length) {
-    h += `<h6 class="mt-3 clickable" onclick="detailBelum()">Belum Lunas</h6>`;
+    h += `<h6 class="mt-3 clickable text-danger" onclick="detailBelum()"><b>> Belum Lunas (${belum.length} Pelanggan)</b></h6>`;
   }
 
   view.innerHTML = h;
@@ -225,6 +222,7 @@ function detailGlobalLunas(t) {
 
 /* ================= DETAIL VIEW ================= */
 function renderDetail() {
+  sortState = { key: null, asc: true }; // Reset sort
   view.innerHTML = `
   <h5 class="text-center">${currentTitle.replace(/_/g, ' ')}</h5>
   <div class="d-flex justify-content-between mb-2">
@@ -233,67 +231,59 @@ function renderDetail() {
   </div>
   <div id="table"></div>`;
 
-  document.getElementById("search").oninput = e => {
+  const searchInput = document.getElementById("search");
+  searchInput.oninput = e => {
     const t = e.target.value.toLowerCase();
-    drawTable(currentDetail.filter(r =>
+    const filtered = currentDetail.filter(r =>
       r.nama.toLowerCase().includes(t) ||
       r.idpel.toLowerCase().includes(t) ||
       r.alamat.toLowerCase().includes(t) ||
       r.koked.toLowerCase().includes(t) ||
       r.tarif.toLowerCase().includes(t) ||
       r.daya.toLowerCase().includes(t)
-    ));
+    );
+    drawTable(filtered);
   };
 
   drawTable(currentDetail);
 }
 
-/* ================== Modifikasi drawTable() ================== */
-let sortConfig = { column: null, ascending: true };
-
 function drawTable(data) {
-  const headers = [
-    { label: "IDPEL", key: "idpel" },
-    { label: "Nama", key: "nama" },
-    { label: "Alamat", key: "alamat" },
-    { label: "Koked", key: "koked" },
-    { label: "Tarif / Daya", key: "tarif_daya" },
-    { label: "Rp", key: "jumlah" }
-  ];
+  // Fungsi Sort Lokal
+  window.triggerSort = (key) => {
+    if (sortState.key === key) {
+      sortState.asc = !sortState.asc;
+    } else {
+      sortState.key = key;
+      sortState.asc = true;
+    }
 
-  // Buat header HTML
-  const headerHtml = headers.map((h, index) => `<th class="clickable">${h.label}</th>`).join('');
-  const tableHeader = `<thead class="table-primary"><tr>${headerHtml}</tr></thead>`;
-
-  // Salin data agar tidak merubah asli saat sorting
-  let sortedData = [...data];
-
-  // Urutkan sesuai konfigurasi
-  if (sortConfig.column) {
-    sortedData.sort((a, b) => {
-      let aVal = a[sortConfig.column];
-      let bVal = b[sortConfig.column];
-      if (sortConfig.column === 'jumlah') {
-        aVal = +aVal || 0;
-        bVal = +bVal || 0;
-      } else if (sortConfig.column === 'tarif_daya') {
-        // gabungkan tarif dan daya sebagai string
-        aVal = (a['tarif'] + " / " + a['daya']).toLowerCase();
-        bVal = (b['tarif'] + " / " + b['daya']).toLowerCase();
-      } else {
-        aVal = aVal || "";
-        bVal = bVal || "";
-      }
-      if (aVal < bVal) return sortConfig.ascending ? -1 : 1;
-      if (aVal > bVal) return sortConfig.ascending ? 1 : -1;
+    const sortedData = [...data].sort((a, b) => {
+      let v1 = a[key], v2 = b[key];
+      if (key === 'jumlah') { v1 = parseFloat(v1) || 0; v2 = parseFloat(v2) || 0; }
+      if (v1 < v2) return sortState.asc ? -1 : 1;
+      if (v1 > v2) return sortState.asc ? 1 : -1;
       return 0;
     });
-  }
+    drawTable(sortedData);
+  };
 
-  // Isi tabel
-  let h = `<table class="table table-sm table-bordered">${tableHeader}<tbody>`;
-  sortedData.forEach(r => {
-    h += `<tr class="clickable" onclick="showCards()">
+  const icon = (k) => sortState.key === k ? (sortState.asc ? ' ▲' : ' ▼') : '';
+
+  let h = `<table class="table table-sm table-bordered">
+  <thead class="table-primary text-nowrap">
+  <tr>
+    <th class="clickable" onclick="triggerSort('idpel')">IDPEL${icon('idpel')}</th>
+    <th class="clickable" onclick="triggerSort('nama')">Nama${icon('nama')}</th>
+    <th class="clickable" onclick="triggerSort('alamat')">Alamat${icon('alamat')}</th>
+    <th class="clickable" onclick="triggerSort('koked')">Koked${icon('koked')}</th>
+    <th class="clickable" onclick="triggerSort('tarif')">Tarif/Daya${icon('tarif')}</th>
+    <th class="clickable" onclick="triggerSort('jumlah')">Rp${icon('jumlah')}</th>
+  </tr>
+  </thead><tbody>`;
+
+  data.forEach(r => {
+    h += `<tr class="clickable" onclick="showCardsByData('${r.idpel}')">
       <td>${r.idpel}</td>
       <td>${r.nama}</td>
       <td>${r.alamat}</td>
@@ -302,23 +292,44 @@ function drawTable(data) {
       <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
     </tr>`;
   });
-  h += `</tbody></table>`;
-  document.getElementById("table").innerHTML = h;
 
-  // Tambahkan event klik ke header
-  const ths = document.querySelectorAll("#table thead th");
-  ths.forEach((th, index) => {
-    th.onclick = () => {
-      const key = headers[index].key;
-      if (sortConfig.column === key) {
-        sortConfig.ascending = !sortConfig.ascending;
-      } else {
-        sortConfig.column = key;
-        sortConfig.ascending = true;
-      }
-      drawTable(currentDetail); // panggil ulang dengan data terurut
-    };
+  document.getElementById("table").innerHTML = h + `</tbody></table>`;
+}
+
+/* ================= CARD ================= */
+// Fungsi baru agar saat klik baris tabel, dia fokus ke kartu pelanggan tersebut
+function showCardsByData(selectedIdpel) {
+  pushView(renderDetail);
+  let h = `<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export Excel</button>`;
+  
+  currentDetail.forEach(r => {
+    const isTarget = r.idpel === selectedIdpel ? 'border-primary border-2' : '';
+    h += `<div class="card mb-2 ${isTarget}"><div class="card-body p-2">
+      <b>${r.nama}</b><br>
+      IDPEL: ${r.idpel}<br>${r.alamat}<br>
+      Koded: ${r.koked}<br>
+      Tarif / Daya: ${r.tarif} / ${r.daya}<br>
+      <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b><br>
+      <a class="btn btn-success btn-sm mt-2" target="_blank"
+      href="https://wa.me/?text=${waMessage(r)}">📤 Kirim WhatsApp</a>
+    </div></div>`;
   });
+  view.innerHTML = h;
+  if(selectedIdpel) {
+      window.scrollTo(0,0);
+  }
+}
+
+// Tetapkan fungsi lama untuk kompatibilitas
+function showCards() { showCardsByData(null); }
+
+/* ================= EXPORT ================= */
+function exportExcel() {
+  let t = `<table><tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koked</th><th>Tarif / Daya</th><th>Jumlah</th></tr>`;
+  currentDetail.forEach(r => {
+    t += `<tr><td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.koked}</td><td>${r.tarif} / ${r.daya}</td><td>${r.jumlah}</td></tr>`;
+  });
+  saveAs(new Blob([t + `</table>`], {type: "application/vnd.ms-excel"}), `${currentTitle}.xls`);
 }
 
 /* ================= INIT ================= */
