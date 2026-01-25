@@ -20,7 +20,6 @@ th{cursor:pointer}
 <body>
 <div class="container my-3">
 
-<!-- TAB PER LEMBAR -->
 <ul class="nav nav-tabs mb-3">
   <li class="nav-item"><a class="nav-link active" id="tab-lembar1" onclick="loadSheet('lembar1')">Lembar 1</a></li>
   <li class="nav-item"><a class="nav-link" id="tab-lembar2" onclick="loadSheet('lembar2')">Lembar 2</a></li>
@@ -105,18 +104,17 @@ Jumlah Tunggakan:
 Rp ${(+r.jumlah).toLocaleString("id-ID")}
 (Belum termasuk biaya administrasi)
 
-Dengan ini diberitahukan bahwa aliran listrik
-terpaksa diputus sementara karena rekening
-belum dilunasi sampai batas waktu yang
-ditentukan.
-
-UNTUK MENGHINDARI RESIKO,
-MOHON TIDAK MENITIPKAN
-PEMBAYARAN KEPADA PETUGAS.
-
 Tulung, ${new Date().toLocaleDateString("id-ID")}
 PLN ULP TULUNG
 `);
+}
+
+/* ================= KIRIM WA (PROMPT NOMOR) ================= */
+function kirimWA(r){
+  let no = prompt("Masukkan nomor WA (misal 62812xxxxxx):");
+  if(!no) return;
+  let url = "https://wa.me/" + no + "?text=" + waMessage(r);
+  window.open(url, "_blank");
 }
 
 /* ================= REKAP PETUGAS ================= */
@@ -298,7 +296,7 @@ function showCards(){
     Koded: ${r.koked}<br>Tarif/Daya: ${r.tarif}/${r.daya}<br>
     <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b>
     <div class="mt-2">
-      <a class="btn btn-success btn-sm" target="_blank" href="https://wa.me/">📤 Kirim WhatsApp</a>
+      <a class="btn btn-success btn-sm" onclick="kirimWA(${JSON.stringify(r)})">📤 Kirim WhatsApp</a>
     </div></div></div>`;
   });
 
@@ -326,6 +324,7 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
+
 
 
 
