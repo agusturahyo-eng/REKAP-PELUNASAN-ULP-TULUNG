@@ -79,6 +79,7 @@ ULP TULUNG
 
 Nama            : ${r.nama}
 ID Pelanggan    : ${r.idpel}
+Koked           : ${r.koked}
 Alamat          : ${r.alamat}
 Tarif / Daya    : ${r.tarif} / ${r.daya}
 
@@ -233,7 +234,7 @@ function renderDetail() {
       r.nama.toLowerCase().includes(t) ||
       r.idpel.toLowerCase().includes(t) ||
       r.alamat.toLowerCase().includes(t) ||
-      r.koded.toLowerCase().includes(t) ||
+      r.koked.toLowerCase().includes(t) ||
       r.tarif.toLowerCase().includes(t) ||
       r.daya.toLowerCase().includes(t)
     ));
@@ -245,7 +246,7 @@ function renderDetail() {
 function drawTable(data) {
   let h = `<table class="table table-sm table-bordered">
   <thead class="table-primary">
-  <tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koded</th><th>Tarif / Daya</th><th>Rp</th></tr>
+  <tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koked</th><th>Tarif / Daya</th><th>Rp</th></tr>
   </thead><tbody>`;
 
   data.forEach(r => {
@@ -253,7 +254,7 @@ function drawTable(data) {
       <td>${r.idpel}</td>
       <td>${r.nama}</td>
       <td>${r.alamat}</td>
-      <td>${r.koded}</td>
+      <td>${r.koked}</td>
       <td>${r.tarif} / ${r.daya}</td>
       <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
     </tr>`;
@@ -270,7 +271,7 @@ function showCards() {
     h += `<div class="card mb-2"><div class="card-body p-2">
       <b>${r.nama}</b><br>
       IDPEL: ${r.idpel}<br>${r.alamat}<br>
-      Koded: ${r.koded}<br>
+      Koded: ${r.koked}<br>
       Tarif / Daya: ${r.tarif} / ${r.daya}<br>
       <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b><br>
       <a class="btn btn-success btn-sm mt-2" target="_blank"
@@ -282,9 +283,9 @@ function showCards() {
 
 /* ================= EXPORT ================= */
 function exportExcel() {
-  let t = `<table><tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koded</th><th>Tarif / Daya</th><th>Jumlah</th></tr>`;
+  let t = `<table><tr><th>IDPEL</th><th>Nama</th><th>Alamat</th><th>Koked</th><th>Tarif / Daya</th><th>Jumlah</th></tr>`;
   currentDetail.forEach(r => {
-    t += `<tr><td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.koded}</td><td>${r.tarif} / ${r.daya}</td><td>${r.jumlah}</td></tr>`;
+    t += `<tr><td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td><td>${r.koked}</td><td>${r.tarif} / ${r.daya}</td><td>${r.jumlah}</td></tr>`;
   });
   saveAs(new Blob([t + `</table>`], {type: "application/vnd.ms-excel"}), `${currentTitle}.xls`);
 }
@@ -294,3 +295,4 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
+
