@@ -40,8 +40,8 @@ const SHEETS={
 };
 
 /* ================= STATE ================= */
-let allData=[], currentDetail=[], currentTitle="";
-let history=[], currentPetugas=null;
+let allData=[], currentDetail=[], currentTitle="", currentPetugas=null;
+let history=[];
 
 /* ================= UTIL ================= */
 const isLunas=r=>r.tgl_lunas && r.tgl_lunas.trim()!=="" && r.tgl_lunas!="-";
@@ -77,9 +77,10 @@ UID JAWA TENGAH DAN DIY
 UP3 KLATEN
 ULP TULUNG
 
-Nama : ${r.nama}
-IDPEL : ${r.idpel}
-Alamat : ${r.alamat}
+Nama            : ${r.nama}
+ID Pelanggan    : ${r.idpel}
+Alamat          : ${r.alamat}
+Tarif / Daya    : ${r.tarif} / ${r.daya}
 
 Jumlah Tunggakan:
 Rp ${(+r.jumlah).toLocaleString("id-ID")}
@@ -88,13 +89,14 @@ PLN ULP TULUNG
 `);
 }
 
-/* ================= PETUGAS ================= */
+/* ================= REKAP PETUGAS ================= */
 function renderPetugas(){
   history=[];
   backBtn.classList.add("d-none");
 
   const map={};
   let totalRp=0;
+
   allData.forEach(r=>{
     map[r.petugas]=map[r.petugas]||{j:0,rp:0};
     map[r.petugas].j++;
@@ -103,30 +105,127 @@ function renderPetugas(){
   });
 
   let h=`<table class="table table-bordered">
-  <thead class="table-dark"><tr><th>Petugas</th><th>Jumlah</th><th>Total Rp</th></tr></thead><tbody>
+  <thead class="table-dark">
+  <tr><th>Petugas</th><th>Jumlah</th><th>Total Rp</th></tr>
+  </thead><tbody>
+
   <tr class="table-primary clickable" onclick="openGlobal()">
-  <td><b>SEMUA PETUGAS</b></td><td><b>${allData.length}</b></td>
-  <td class="text-end"><b>${totalRp.toLocaleString("id-ID")}</b></td></tr>`;
+    <td><b>SEMUA PETUGAS</b></td>
+    <td><b>${allData.length}</b></td>
+    <td class="text-end"><b>${totalRp.toLocaleString("id-ID")}</b></td>
+  </tr>`;
 
   Object.keys(map).forEach(p=>{
     h+=`<tr class="clickable" onclick="openPetugas('${p}')">
-    <td>${p}</td><td>${map[p].j}</td>
-    <td class="text-end">${map[p].rp.toLocaleString("id-ID")}</td></tr>`;
+      <td>${p}</td>
+      <td>${map[p].j}</td>
+      <td class="text-end">${map[p].rp.toLocaleString("id-ID")}</td>
+    </tr>`;
+  });
+
+  view.innerHTML=h+`</tbody></table>`;
+}
+
+/* ================= PETUGAS ================= */
+function openPetugas(p){
+  pushView(renderPetugas);
+  currentPetugas=p;
+
+  const data=allData.filter(r=>r.petugas===p);
+  const lunas=data.filter(isLunas);
+  const belum=data.filter(r=>!isLunas(r));
+
+  const byDate={};
+  lunas.forEach(r=>{
+    byDate[r.tgl_lunas]=byDate[r.tgl_lunas]||{j:0,rp:0};
+    byDate[r.tgl_lunas].j++;
+    byDate[r.tgl_lunas].rp+=(+r.jumlah||0);
+  });
+
+  let h=`<h6 class="text-primary">Petugas: ${p}</h6>
+  <h6 class="text-success mt-3">Lunas per Tanggal</h6>
+  <table class="table table-sm table-bordered">
+  <thead class="table-success">
+  <tr><th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr>
+  </thead><tbody>`;
+
+  Object.keys(byDate).forEach(t=>{
+    h+=`<tr class="clickable" onclick="detailLunas('${t}')">
+      <td>${t}</td>
+      <td>${byDate[t].j}</td>
+      <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td>
+    </tr>`;
+  });
+
+  h+=`</tbody></table>`;
+
+  if(belum.length){
+    h+=`<h6 class="mt-3 clickable" onclick="detailBelum()">Belum Lunas</h6>`;
+  }
+
+  view.innerHTML=h;
+}
+
+/* ================= GLOBAL ================= */
+function openGlobal(){
+  pushView(renderPetugas);
+
+  const lunas=allData.filter(isLunas);
+  const byDate={};
+
+  lunas.forEach(r=>{
+    byDate[r.tgl_lunas]=byDate[r.tgl_lunas]||{j:0,rp:0};
+    byDate[r.tgl_lunas].j++;
+    byDate[r.tgl_lunas].rp+=(+r.jumlah||0);
+  });
+
+  let h=`<h6 class="text-primary">Semua Petugas</h6>
+  <h6 class="text-success mt-3">Lunas per Tanggal</h6>
+  <table class="table table-sm table-bordered">
+  <thead class="table-success">
+  <tr><th>Tanggal</th><th>Pelanggan</th><th>Total Rp</th></tr>
+  </thead><tbody>`;
+
+  Object.keys(byDate).forEach(t=>{
+    h+=`<tr class="clickable" onclick="detailGlobalLunas('${t}')">
+      <td>${t}</td>
+      <td>${byDate[t].j}</td>
+      <td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td>
+    </tr>`;
   });
 
   view.innerHTML=h+`</tbody></table>`;
 }
 
 /* ================= DETAIL ================= */
-function renderDetail(title){
+function detailLunas(t){
+  pushView(()=>openPetugas(currentPetugas));
+  currentTitle=`Lunas_${t}`;
+  currentDetail=allData.filter(r=>r.petugas===currentPetugas && isLunas(r) && r.tgl_lunas===t);
+  renderDetail();
+}
+function detailBelum(){
+  pushView(()=>openPetugas(currentPetugas));
+  currentTitle="Belum_Lunas";
+  currentDetail=allData.filter(r=>r.petugas===currentPetugas && !isLunas(r));
+  renderDetail();
+}
+function detailGlobalLunas(t){
+  pushView(openGlobal);
+  currentTitle=`Global_Lunas_${t}`;
+  currentDetail=allData.filter(r=>isLunas(r)&&r.tgl_lunas===t);
+  renderDetail();
+}
+
+/* ================= DETAIL VIEW ================= */
+function renderDetail(){
   view.innerHTML=`
   <div class="d-flex justify-content-between mb-2">
-    <input class="form-control form-control-sm w-50" placeholder="Search..." id="search">
-    <button class="btn btn-success btn-sm" id="btnExport">⬇ Export Excel</button>
+    <input id="search" class="form-control form-control-sm w-50" placeholder="Search...">
+    <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
   </div>
   <div id="table"></div>`;
 
-  document.getElementById("btnExport").onclick=exportExcel;
   document.getElementById("search").oninput=e=>{
     const t=e.target.value.toLowerCase();
     drawTable(currentDetail.filter(r=>
@@ -147,8 +246,9 @@ function drawTable(data){
 
   data.forEach(r=>{
     h+=`<tr class="clickable" onclick="showCards()">
-    <td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
-    <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td></tr>`;
+      <td>${r.idpel}</td><td>${r.nama}</td><td>${r.alamat}</td>
+      <td class="text-end">${(+r.jumlah).toLocaleString("id-ID")}</td>
+    </tr>`;
   });
 
   document.getElementById("table").innerHTML=h+`</tbody></table>`;
@@ -156,14 +256,15 @@ function drawTable(data){
 
 /* ================= CARD ================= */
 function showCards(){
-  pushView(()=>renderDetail(currentTitle));
+  pushView(renderDetail);
   let h=`<button class="btn btn-success btn-sm mb-2" onclick="exportExcel()">⬇ Export Excel</button>`;
   currentDetail.forEach(r=>{
     h+=`<div class="card mb-2"><div class="card-body p-2">
-    <b>${r.nama}</b><br>IDPEL:${r.idpel}<br>${r.alamat}<br>
-    <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b><br>
-    <a class="btn btn-success btn-sm mt-2" target="_blank"
-    href="https://wa.me/?text=${waMessage(r)}">📤 Kirim WhatsApp</a>
+      <b>${r.nama}</b><br>
+      IDPEL: ${r.idpel}<br>${r.alamat}<br>
+      <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b><br>
+      <a class="btn btn-success btn-sm mt-2" target="_blank"
+      href="https://wa.me/?text=${waMessage(r)}">📤 Kirim WhatsApp</a>
     </div></div>`;
   });
   view.innerHTML=h;
@@ -178,26 +279,13 @@ function exportExcel(){
   saveAs(new Blob([t+`</table>`],{type:"application/vnd.ms-excel"}),`${currentTitle}.xls`);
 }
 
-/* ================= OPEN ================= */
-function openPetugas(p){
-  pushView(renderPetugas);
-  currentPetugas=p;
-  currentDetail=allData.filter(r=>r.petugas===p);
-  currentTitle=p;
-  renderDetail(p);
-}
-function openGlobal(){
-  pushView(renderPetugas);
-  currentDetail=[...allData];
-  currentTitle="SEMUA";
-  renderDetail("SEMUA");
-}
-
 /* ================= INIT ================= */
 loadSheet("lembar1");
 </script>
 </body>
 </html>
+
+
 
 
 
