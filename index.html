@@ -109,13 +109,6 @@ PLN ULP TULUNG
 `);
 }
 
-/* ================= KIRIM WA ================= */
-function kirimWA(r){
-  // langsung buka WA, user pilih kontak sendiri
-  const url = "https://web.whatsapp.com/send?text=" + waMessage(r);
-  window.open(url,"_blank");
-}
-
 /* ================= REKAP PETUGAS ================= */
 function renderPetugas(){
   history=[];
@@ -285,18 +278,17 @@ function showCards(){
         <b>${r.nama}</b><br>IDPEL: ${r.idpel}<br>${r.alamat}<br>
         Koded: ${r.koked}<br>Tarif/Daya: ${r.tarif}/${r.daya}<br>
         <b>Rp ${(+r.jumlah).toLocaleString("id-ID")}</b>
-        <div class="mt-2" id="btn-wa-${i}"></div>
+        <div class="mt-2">
+          <a class="btn btn-success btn-sm"
+             target="_blank"
+             href="https://wa.me/?text=${waMessage(r)}">
+             📤 Kirim via WhatsApp
+          </a>
+        </div>
       </div>
     </div>`;
   });
   view.innerHTML=h;
-  filteredDetail.forEach((r,i)=>{
-    const btn = document.createElement("button");
-    btn.className="btn btn-success btn-sm";
-    btn.innerText="📤 Kirim WhatsApp";
-    btn.onclick = ()=>kirimWA(r);
-    document.getElementById(`btn-wa-${i}`).appendChild(btn);
-  });
 }
 
 /* ================= EXPORT ================= */
@@ -320,6 +312,8 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
+
+
 
 
 
