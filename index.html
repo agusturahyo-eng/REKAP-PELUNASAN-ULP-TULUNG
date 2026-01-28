@@ -61,19 +61,19 @@ function loadSheet(k) {
   });
 }
 
-/* ================= WA MESSAGE TUL VI-01 (TOTAL TUNGGAKAN UPDATE) ================= */
+/* ================= WA MESSAGE TUL VI-01 ================= */
 function waMessage(r) {
   const date = new Date();
   const namaBulan = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
   const tglTulis = `21 ${namaBulan[date.getMonth()]} ${date.getFullYear()}`;
   
-  // Konversi string ke angka agar bisa dijumlahkan
-  const nTagihan = parseFloat(r.jumlah) || 0;
-  const nBK = parseFloat(r.rpbk) || 0;
+  // Pastikan angka valid
+  const nTagihan = parseFloat(String(r.jumlah).replace(/[^0-9.-]+/g,"")) || 0;
+  const nBK = parseFloat(String(r.rpbk).replace(/[^0-9.-]+/g,"")) || 0;
   const nTotal = nTagihan + nBK;
 
   const rptag = nTagihan.toLocaleString("id-ID");
-  const rpbkStr = nBK > 0 ? nBK.toLocaleString("id-ID") : "--------------------------";
+  const rpbkStr = nBK.toLocaleString("id-ID");
   const rptotal = nTotal.toLocaleString("id-ID");
 
   return encodeURIComponent(`*PT. PLN (PERSERO) UID JAWA TENGAH DAN DIY*
@@ -115,7 +115,7 @@ TULUNG, ${tglTulis}
 *ABAIKAN PEMBERITAHUAN INI JIKA SUDAH MEMBAYAR TAGIHAN*`);
 }
 
-/* ================= LAYOUT VIEWS ================= */
+/* ================= REKAP PETUGAS (URUT NAMA A-Z) ================= */
 function renderPetugas() {
   historyStack = []; backBtn.classList.add("d-none");
   const map = {}; let totalRp = 0;
@@ -124,7 +124,10 @@ function renderPetugas() {
     map[pName] = map[pName] || {j: 0, rp: 0};
     map[pName].j++; map[pName].rp += (+r.jumlah || 0); totalRp += (+r.jumlah || 0);
   });
-  const sorted = Object.keys(map).map(p => ({name: p, ...map[p]})).sort((a, b) => b.rp - a.rp);
+  
+  // Urutkan berdasarkan Nama Petugas (Abjad)
+  const sorted = Object.keys(map).sort().map(p => ({name: p, ...map[p]}));
+
   let h = `<div class="table-responsive"><table class="table table-bordered"><thead class="table-dark"><tr><th>Petugas</th><th>Jumlah</th><th>Total Rp</th></tr></thead><tbody><tr class="table-primary clickable" onclick="openGlobal()"><td><b>SEMUA PETUGAS</b></td><td><b>${allData.length}</b></td><td class="text-end"><b>${totalRp.toLocaleString("id-ID")}</b></td></tr>`;
   sorted.forEach(p => { h += `<tr class="clickable" onclick="openPetugas('${p.name}')"><td>${p.name}</td><td>${p.j}</td><td class="text-end">${p.rp.toLocaleString("id-ID")}</td></tr>`; });
   view.innerHTML = h + `</tbody></table></div>`;
@@ -202,4 +205,5 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
+
 
