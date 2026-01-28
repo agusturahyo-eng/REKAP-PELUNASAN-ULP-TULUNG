@@ -63,6 +63,54 @@ backBtn.onclick = () => {
   if (historyStack.length === 0) { backBtn.classList.add("d-none"); renderPetugas(); }
 };
 
+/* ================= WA MESSAGE (FORMAT PDF LENGKAP) ================= */
+function waMessage(r) {
+  const date = new Date();
+  const nBulanFull = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
+  const nBulanShort = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOP", "DES"];
+  const blnIni = `${nBulanShort[date.getMonth()]}-${date.getFullYear()}`;
+  const blnLalu = date.getMonth() === 0 ? `DES-${date.getFullYear()-1}` : `${nBulanShort[date.getMonth()-1]}-${date.getFullYear()}`;
+  let periode = (currentSheet === 'lembar1') ? `${blnIni} s/d ${blnIni} (1 LEMBAR)` : `${blnLalu} s/d ${blnIni} (2 LEMBAR)`;
+
+  const txt = `*PT. PLN (PERSERO) UID JAWA TENGAH DAN DIY*
+*UP3 KLATEN*
+*ULP TULUNG*
+
+*PEMBERITAHUAN PELAKSANAAN PEMUTUSAN SEMENTARA SAMBUNGAN TENAGA LISTRIK*
+==========================================
+
+Kepada Yth.
+*Nama:* ${r.nama}
+*ID. Pelanggan:* ${r.idpel}
+*Alamat:* ${r.alamat || '-'}
+*Nomor Meter:* -
+*Nama Gardu/Tiang:* -
+*Tarip / Daya:* ${r.tarif} / ${r.daya}
+*Koked:* ${r.koked}
+
+*Rincian Tagihan:*
+*Rekening:* ${periode}
+Rp. ${Number(r.rptag || 0).toLocaleString("id-ID")}
+*Biaya Keterlambatan s.d bulan ${blnIni}:*
+Rp. ${Number(r.rpbk || 0).toLocaleString("id-ID")}
+*Jumlah Tunggakan:*
+*Rp. ${Number(r.jumlah || 0).toLocaleString("id-ID")}*
+_(belum termasuk biaya Administrasi)_
+
+Dengan ini diberitahukan dengan hormat bahwa pada hari ini aliran listrik di rumah/alamat tersebut diatas terpaksa diputus untuk sementara karena rekening listrik belum dilunasi pada waktu yang telah ditetapkan.
+
+Penyambungan kembali akan dilakukan pada setiap hari jam kerja apabila rekening serta biaya keterlambatan dilunasi di tempat pembayaran resmi (PLN Mobile, Kantor Pos, Bank/PPOB).
+
+*UNTUK MENGHINDARI RESIKO, MOHON TIDAK TITIP PEMBAYARAN REKENING KEPADA PETUGAS.*
+
+TULUNG, ${date.getDate()} ${nBulanFull[date.getMonth()]} ${date.getFullYear()}
+*MANAGER ULP TULUNG*
+*MARTONO AJI PRABOWO*
+
+_Abaikan pemberitahuan ini jika sudah membayar tagihan._`;
+  return encodeURIComponent(txt);
+}
+
 /* ================= TEMPLATE PDF TUL VI-01 ================= */
 function createPDF(r) {
   const doc = new jsPDF();
@@ -95,7 +143,6 @@ function createPDF(r) {
 
   doc.text(`Rekening : ${periode}`, 15, 85);
   doc.text(`Rp. :`, 150, 85); doc.text(Number(r.rptag || 0).toLocaleString("id-ID"), 190, 85, {align: "right"});
-  
   doc.text(`Jumlah Biaya Keterlambatan s.d bulan : ${blnIni}`, 15, 90);
   doc.text(`Rp. :`, 150, 90); doc.text(Number(r.rpbk || 0).toLocaleString("id-ID"), 190, 90, {align: "right"});
   
@@ -106,13 +153,11 @@ function createPDF(r) {
   doc.setFont(undefined, 'normal');
   let msg1 = doc.splitTextToSize("Dengan ini diberitahukan dengan hormat bahwa pada hari ini aliran listrik di rumah/alamat seperti tersebut diatas terpaksa diputus untuk sementara karena rekening listrik belum dilunasi pada waktu yang telah ditetapkan. Penyambungan kembali akan dilakukan pada setiap hari jam kerja apabila rekening serta biaya keterlambatan dilunasi di tempat penerimaan pembayaran rekening listrik, kantor pos, atau bank yang ditunjuk oleh PLN.", 180);
   doc.text(msg1, 15, 105);
-
   let msg2 = doc.splitTextToSize("Apabila dalam jangka waktu 60 hari terhitung sejak dilakukan pemutusan sementara tunggakan belum dilunasi, maka instalasi milik PLN akan dibongkar, dan penyambungan kembali dapat dilaksanakan setelah Saudara menyelesaikan Biaya Penyambungan yang diperlakukan sebagai sambungan baru serta tetap diwajibkan membayar tagihan listrik yang belum dilunasi beserta dendanya.", 180);
   doc.text(msg2, 15, 125);
 
   doc.setFont(undefined, 'bold');
   doc.text("UNTUK MENGHINDARI RESIKO, MOHON TIDAK TITIP PEMBAYARAN REKENING KEPADA PETUGAS", 15, 145);
-  
   doc.text(`TULUNG, 21 ${nBulanFull[date.getMonth()]} ${date.getFullYear()}`, 150, 155);
   doc.text("MANAGER", 157, 160);
 
@@ -128,12 +173,6 @@ function createPDF(r) {
   doc.text("ABAIKAN PEMBERITAHUAN INI JIKA SUDAH MEMBAYAR TAGIHAN", 15, 215);
 
   doc.save(`TUL_${r.idpel}.pdf`);
-}
-
-function waMessage(r) {
-  const nTagihan = parseFloat(String(r.rptag).replace(/[^0-9.-]+/g,"")) || 0;
-  const nTotal = parseFloat(String(r.jumlah).replace(/[^0-9.-]+/g,"")) || 0;
-  return encodeURIComponent(`*PT. PLN (PERSERO) ULP TULUNG*\n\n*Nama:* ${r.nama}\n*IDPEL:* ${r.idpel}\n*Rekening:* Rp ${nTagihan.toLocaleString("id-ID")}\n*Total Tunggakan:* Rp ${nTotal.toLocaleString("id-ID")}\n\nMohon segera melunasi tagihan listrik Anda. Terima Kasih.`);
 }
 
 /* ================= ALUR PETUGAS ================= */
@@ -162,8 +201,9 @@ function openPetugas(p) {
   let totalBelumRp = belum.reduce((acc, r) => acc + (+r.jumlah || 0), 0);
   let h = `<h6 class="text-primary fw-bold">Petugas: ${p}</h6><h6 class="text-success mt-3 small">Lunas per Tanggal</h6><div class="table-responsive"><table class="table table-sm table-bordered"><thead class="table-success"><tr><th>Tanggal</th><th>Plg</th><th>Total Rp</th></tr></thead><tbody>`;
   
-  // Baris Belum Lunas Sesuai Gambar
-  h += `<tr class="clickable" onclick="detailBelum()"><td>BELUMLUNAS</td><td>${belum.length}</td><td class="text-end">${totalBelumRp.toLocaleString("id-ID")}</td></tr>`;
+  if (belum.length > 0) {
+    h += `<tr class="clickable" onclick="detailBelum()"><td>BELUMLUNAS</td><td>${belum.length}</td><td class="text-end">${totalBelumRp.toLocaleString("id-ID")}</td></tr>`;
+  }
   
   Object.keys(byDate).sort().reverse().forEach(t => { 
     h += `<tr class="clickable" onclick="detailLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td><td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`; 
@@ -178,7 +218,9 @@ function openGlobal() {
   let totalBelumRp = belum.reduce((acc, r) => acc + (+r.jumlah || 0), 0);
 
   let h = `<h6 class="text-primary fw-bold">Semua Petugas</h6><h6 class="text-success mt-3 small">Lunas per Tanggal (Global)</h6><div class="table-responsive"><table class="table table-sm table-bordered"><thead class="table-success"><tr><th>Tanggal</th><th>Plg</th><th>Total Rp</th></tr></thead><tbody>`;
-  h += `<tr class="clickable" onclick="detailBelum()"><td>BELUMLUNAS</td><td>${belum.length}</td><td class="text-end">${totalBelumRp.toLocaleString("id-ID")}</td></tr>`;
+  if (belum.length > 0) {
+    h += `<tr class="clickable" onclick="detailBelum()"><td>BELUMLUNAS</td><td>${belum.length}</td><td class="text-end">${totalBelumRp.toLocaleString("id-ID")}</td></tr>`;
+  }
   Object.keys(byDate).sort().reverse().forEach(t => { h += `<tr class="clickable" onclick="detailGlobalLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td><td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`; });
   view.innerHTML = h + `</tbody></table></div>`;
 }
