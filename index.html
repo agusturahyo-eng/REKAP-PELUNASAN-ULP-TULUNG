@@ -15,7 +15,6 @@ tr:hover{background:#eef3ff}
 .table-primary th:hover { background-color: #0d6efd !important; color: white; }
 .table-responsive { overflow-x: auto; }
 .card.highlight { border: 2px solid #0d6efd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-/* Gaya tulisan rapat untuk card view */
 .card-body p { margin-bottom: 2px; line-height: 1.2; }
 </style>
 </head>
@@ -64,6 +63,7 @@ backBtn.onclick = () => {
   if (historyStack.length === 0) { backBtn.classList.add("d-none"); renderPetugas(); }
 };
 
+/* ================= GENERATE PDF ================= */
 function createPDF(r) {
   const doc = new jsPDF();
   const date = new Date();
@@ -107,6 +107,7 @@ function waMessage(r) {
   return encodeURIComponent(`*PT. PLN (PERSERO) ULP TULUNG*\n\n*Nama:* ${r.nama}\n*IDPEL:* ${r.idpel}\n*Rekening:* Rp ${nTagihan.toLocaleString("id-ID")}\n*Total Tunggakan:* Rp ${nTotal.toLocaleString("id-ID")}\n\nMohon segera melunasi tagihan listrik Anda. Terima Kasih.`);
 }
 
+/* ================= ALUR PETUGAS ================= */
 function renderPetugas() {
   historyStack = []; backBtn.classList.add("d-none");
   const map = {}; let totalRp = 0;
@@ -123,27 +124,59 @@ function renderPetugas() {
 
 function openPetugas(p) {
   currentPetugas = p; pushView(renderPetugas);
-  const data = allData.filter(r => r.petugas === p), belum = data.filter(r => !isLunas(r));
-  let h = `<h6 class="text-primary fw-bold">Petugas: ${p}</h6><div class="d-grid gap-2 mt-3"><button class="btn btn-danger btn-sm fw-bold" onclick="detailBelum()">Lihat Belum Lunas (${belum.length})</button><button class="btn btn-outline-success btn-sm" onclick="openPetugasLunas('${p}')">Lihat Lunas</button></div>`;
+  const data = allData.filter(r => r.petugas === p);
+  const lunas = data.filter(isLunas);
+  const belum = data.filter(r => !isLunas(r));
+  
+  // Hitung Rekap per Tanggal Lunas
+  const byDate = {};
+  lunas.forEach(r => { 
+    byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0}; 
+    byDate[r.tgl_lunas].j++; 
+    byDate[r.tgl_lunas].rp += (+r.jumlah || 0); 
+  });
+
+  // Hitung Rekap Belum Lunas
+  let totalBelumRp = belum.reduce((acc, r) => acc + (+r.jumlah || 0), 0);
+  
+  let h = `<h6 class="text-primary fw-bold">Petugas: ${p}</h6><h6 class="text-success mt-3 small">Lunas per Tanggal</h6><div class="table-responsive"><table class="table table-sm table-bordered"><thead class="table-success"><tr><th>Tanggal</th><th>Plg</th><th>Total Rp</th></tr></thead><tbody>`;
+  
+  // Baris Belum Lunas (Paling Atas)
+  h += `<tr class="table-warning clickable" onclick="detailBelum()"><td><b>BELUMLUNAS</b></td><td>${belum.length}</td><td class="text-end"><b>${totalBelumRp.toLocaleString("id-ID")}</b></td></tr>`;
+  
+  // Baris Lunas per Tanggal
+  Object.keys(byDate).sort().reverse().forEach(t => { 
+    h += `<tr class="clickable" onclick="detailLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td><td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`; 
+  });
+  
+  h += `</tbody></table></div>`;
   view.innerHTML = h;
 }
 
-function openPetugasLunas(p) {
-  pushView(() => openPetugas(p));
-  const data = allData.filter(r => r.petugas === p && isLunas(r)), byDate = {};
-  data.forEach(r => { byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0}; byDate[r.tgl_lunas].j++; byDate[r.tgl_lunas].rp += (+r.jumlah || 0); });
-  let h = `<h6>Lunas - ${p}</h6><table class="table table-sm table-bordered"><thead><tr class="table-success"><th>Tanggal</th><th>Plg</th></tr></thead><tbody>`;
-  Object.keys(byDate).sort().reverse().forEach(t => { h += `<tr class="clickable" onclick="detailLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td></tr>`; });
-  view.innerHTML = h + `</tbody></table>`;
+function openGlobal() {
+  currentPetugas = "Semua"; pushView(renderPetugas);
+  const lunas = allData.filter(isLunas);
+  const belum = allData.filter(r => !isLunas(r));
+  const byDate = {};
+  lunas.forEach(r => { byDate[r.tgl_lunas] = byDate[r.tgl_lunas] || {j: 0, rp: 0}; byDate[r.tgl_lunas].j++; byDate[r.tgl_lunas].rp += (+r.jumlah || 0); });
+  
+  let totalBelumRp = belum.reduce((acc, r) => acc + (+r.jumlah || 0), 0);
+
+  let h = `<h6 class="text-primary fw-bold">Semua Petugas</h6><h6 class="text-success mt-3 small">Lunas per Tanggal (Global)</h6><div class="table-responsive"><table class="table table-sm table-bordered"><thead class="table-success"><tr><th>Tanggal</th><th>Plg</th><th>Total Rp</th></tr></thead><tbody>`;
+  
+  h += `<tr class="table-warning clickable" onclick="detailBelum()"><td><b>BELUMLUNAS</b></td><td>${belum.length}</td><td class="text-end"><b>${totalBelumRp.toLocaleString("id-ID")}</b></td></tr>`;
+  
+  Object.keys(byDate).sort().reverse().forEach(t => { h += `<tr class="clickable" onclick="detailGlobalLunas('${t}')"><td>${t}</td><td>${byDate[t].j}</td><td class="text-end">${byDate[t].rp.toLocaleString("id-ID")}</td></tr>`; });
+  view.innerHTML = h + `</tbody></table></div>`;
 }
 
-function detailLunas(t) { const p = currentPetugas; pushView(() => openPetugasLunas(p)); currentTitle = `Lunas_${t}`; currentDetail = allData.filter(r => r.petugas === p && isLunas(r) && r.tgl_lunas === t); renderDetail(); }
-function detailBelum() { const p = currentPetugas; pushView(() => openPetugas(p)); currentTitle = "Belum_Lunas"; currentDetail = allData.filter(r => r.petugas === p && !isLunas(r)); renderDetail(); }
-function openGlobal() { currentPetugas = "Semua"; pushView(renderPetugas); detailBelum(); }
+function detailLunas(t) { const p = currentPetugas; pushView(() => openPetugas(p)); currentTitle = `Lunas_${t}`; currentDetail = allData.filter(r => r.petugas === p && isLunas(r) && r.tgl_lunas === t); renderDetail(); }
+function detailBelum() { const p = currentPetugas; pushView(() => (p === "Semua" ? openGlobal() : openPetugas(p))); currentTitle = "Belum_Lunas"; currentDetail = allData.filter(r => (p === "Semua" ? true : r.petugas === p) && !isLunas(r)); renderDetail(); }
+function detailGlobalLunas(t) { pushView(openGlobal); currentTitle = `Global_Lunas_${t}`; currentDetail = allData.filter(r => isLunas(r) && r.tgl_lunas === t); renderDetail(); }
 
 function renderDetail() {
   sortState = { key: null, asc: true };
-  view.innerHTML = `<h6 class="text-center fw-bold">${currentTitle.replace(/_/g,' ')}</h6><div class="d-flex mb-2 gap-1"><input id="search" class="form-control form-control-sm" placeholder="Cari..."><button class="btn btn-success btn-sm" onclick="exportExcel()">XLSX</button></div><div id="tableArea"></div>`;
+  view.innerHTML = `<h6 class="text-center fw-bold text-uppercase" style="font-size:0.8rem">${currentTitle.replace(/_/g,' ')}</h6><div class="d-flex mb-2 gap-1"><input id="search" class="form-control form-control-sm" placeholder="Cari..."><button class="btn btn-success btn-sm" onclick="exportExcel()">XLSX</button></div><div id="tableArea"></div>`;
   document.getElementById("search").oninput = e => {
     const t = e.target.value.toLowerCase();
     drawTable(currentDetail.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(t))));
@@ -157,7 +190,7 @@ function drawTable(data) {
     const sorted = [...data].sort((a, b) => {
       let v1 = String(a[key] || ""), v2 = String(b[key] || "");
       if (key === 'jumlah') { v1 = parseFloat(v1) || 0; v2 = parseFloat(v2) || 0; }
-      return sortState.asc ? (v1 > v2 ? 1 : -1) : (v1 < v2 ? 1 : -1);
+      return sortState.asc ? (v1.localeCompare(v2, undefined, {numeric: true})) : (v2.localeCompare(v1, undefined, {numeric: true}));
     });
     drawTable(sorted);
   };
@@ -200,7 +233,3 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
-
-
-
-
