@@ -61,20 +61,18 @@ function loadSheet(k) {
   });
 }
 
-/* ================= WA MESSAGE TUL VI-01 ================= */
+/* ================= WA MESSAGE TUL VI-01 (FINAL) ================= */
 function waMessage(r) {
   const date = new Date();
   const namaBulan = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
   const tglTulis = `21 ${namaBulan[date.getMonth()]} ${date.getFullYear()}`;
   
-  // Pastikan angka valid
   const nTagihan = parseFloat(String(r.jumlah).replace(/[^0-9.-]+/g,"")) || 0;
   const nBK = parseFloat(String(r.rpbk).replace(/[^0-9.-]+/g,"")) || 0;
-  const nTotal = nTagihan + nBK;
 
   const rptag = nTagihan.toLocaleString("id-ID");
   const rpbkStr = nBK.toLocaleString("id-ID");
-  const rptotal = nTotal.toLocaleString("id-ID");
+  const rptotal = nTagihan.toLocaleString("id-ID"); // Diambil dari kolom jumlah saja
 
   return encodeURIComponent(`*PT. PLN (PERSERO) UID JAWA TENGAH DAN DIY*
 *UP3 KLATEN* *NO. TUL :*
@@ -94,7 +92,7 @@ Kepada Yth.
 
 *Rekening:* Rp ${rptag}
 *Jumlah Biaya Keterlambatan:* Rp ${rpbkStr}
-*Jumlah Tunggakan (Tagihan+BK):* *Rp ${rptotal}*
+*Jumlah Tunggakan (Belum termasuk biaya Adm):* *Rp ${rptotal}*
 
 Dengan ini diberitahukan dengan hormat bahwa pada hari ini aliran listrik di rumah/alamat tersebut di atas terpaksa diputus untuk sementara karena rekening listrik belum dilunasi pada waktu yang telah ditetapkan.
 
@@ -115,7 +113,7 @@ TULUNG, ${tglTulis}
 *ABAIKAN PEMBERITAHUAN INI JIKA SUDAH MEMBAYAR TAGIHAN*`);
 }
 
-/* ================= REKAP PETUGAS (URUT NAMA A-Z) ================= */
+/* ================= REKAP PETUGAS (URUT ABJAD) ================= */
 function renderPetugas() {
   historyStack = []; backBtn.classList.add("d-none");
   const map = {}; let totalRp = 0;
@@ -125,7 +123,7 @@ function renderPetugas() {
     map[pName].j++; map[pName].rp += (+r.jumlah || 0); totalRp += (+r.jumlah || 0);
   });
   
-  // Urutkan berdasarkan Nama Petugas (Abjad)
+  // Urutkan Nama Petugas A-Z
   const sorted = Object.keys(map).sort().map(p => ({name: p, ...map[p]}));
 
   let h = `<div class="table-responsive"><table class="table table-bordered"><thead class="table-dark"><tr><th>Petugas</th><th>Jumlah</th><th>Total Rp</th></tr></thead><tbody><tr class="table-primary clickable" onclick="openGlobal()"><td><b>SEMUA PETUGAS</b></td><td><b>${allData.length}</b></td><td class="text-end"><b>${totalRp.toLocaleString("id-ID")}</b></td></tr>`;
@@ -205,5 +203,6 @@ loadSheet("lembar1");
 </script>
 </body>
 </html>
+
 
 
